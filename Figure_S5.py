@@ -1,80 +1,93 @@
 
-import pandas as pd
-import numpy as np
+import pandas as pd 
+import seaborn as sns
 import matplotlib.pyplot as plt
-import os
+from pathlib import Path
 from code_utils import analysis_plotting as pl
+from add_example_traces import add_example_to_plot
 
-def FigureS5(
+plt.rcParams.update({
+    'font.family': 'Arial',
+    'svg.fonttype': 'none',
+    'font.size':10
+})
+
+
+
+def GenerateFigure(
         datapath,
+        ephys_datapath,
         savepath,
         ):
-
-    data_to_plot = pd.read_csv(datapath)
-
-    interneuron_subclasses = ['PV','SST','VIP']
-    pyramidal_type = data_to_plot['pyramidal_type'].iloc[0] 
-    savefig = False  # make true to save individual plots
-
-    fig, ax = plt.subplots(
-        3, 3,
-        gridspec_kw={
-             'width_ratios': [1.2, 0.9, .2],
-             'height_ratios': [1, 1, 1],
-             'wspace': 0.5,
-             'hspace': 0.4
-         },
-        figsize=(9.27, 10.69)
-    )
-    labels = ['Cell 1','Cell 2']
-
-        # Remove first column
-    for a in ax[:, 0]:
-        a.axis('off')
-
-    [PV_scatter, PV_bias,
-     SST_scatter, SST_bias,
-     VIP_scatter, VIP_bias] = ax[:, 1:].reshape(-1)
     
-    # Panel letters on reserved first column + scatter panels
-    pl.add_panel_letter(ax[0, 0], 'a')
-    pl.add_panel_letter(PV_scatter, 'b', x=-0.3, y=1.15)
+    fig = plt.figure(figsize=(8.27, 11.69/4.5))
 
-    pl.add_panel_letter(ax[1, 0], 'c')
-    pl.add_panel_letter(SST_scatter, 'd', x=-0.3, y=1.15)
+    gs = fig.add_gridspec(
+        1, 3,
+        width_ratios=[0.5,2,1],
+        wspace=0.5
+    )
+    pl.add_panel_letter(fig, gs[0, 0], 'a')
+    pl.add_panel_letter(fig, gs[0, 2], 'b')
 
-    pl.add_panel_letter(ax[2, 0], 'e')
-    pl.add_panel_letter(VIP_scatter, 'f', x=-0.3, y=1.15)
+    ax = fig.add_subplot(gs[0, 2])
+    ax_example = fig.add_subplot(gs[0,1])
+    ax_example.axis('off')
+    add_example_to_plot(fig, gs[0,1], example='unlabeled',type='ipsc')
 
+    unlabeled_data = pd.read_csv(ephys_datapath)
+    unlabeled_data = unlabeled_data[unlabeled_data.pair_type=='unlabeled']
+    mean = unlabeled_data.percent_shared_mean.mean()
+    sem = unlabeled_data.percent_shared_mean.sem()
+    print(f'Mean: {mean:.3f}')
+    print(f'SEM: {sem:.3f}')
+    sns.barplot(unlabeled_data,
+                x='pair_type',
+                y='percent_shared_mean',
+                color='grey',
+                alpha=0.5,
+                ax=ax,
+                errorbar='se')
+    sns.stripplot(unlabeled_data,
+                x='pair_type',
+                y='percent_shared_mean',
+                color='grey',
+                ax=ax,
+                )
+    ax.set_ylabel('Shared inhibitory inputs (%)')
+    ax.set_xlabel(' ')
+    ax.set_xticklabels([])
+    ax.set_xticks([])
+    sns.despine(fig,top=True,right=True)
 
-    interneuron_subclass = 'PV'
-    data_subset = data_to_plot[data_to_plot.interneuron_type == interneuron_subclass]
-    interneuron_type = data_subset['interneuron_type'].iloc[0]
-    pl.equality_plot(PV_scatter,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,pyramidal_type,f'{interneuron_subclass} IPSC peak',savefig,savepath,interneuron_type)
-    pl.biasplot(PV_bias,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,' ',pyramidal_type,savefig,savepath,interneuron_type)
-
-    interneuron_subclass = 'SST'
-    data_subset = data_to_plot[data_to_plot.interneuron_type == interneuron_subclass]
-    interneuron_type = data_subset['interneuron_type'].iloc[0]
-    pl.equality_plot(SST_scatter,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,pyramidal_type,f'{interneuron_subclass} IPSC peak',savefig,savepath,interneuron_type)
-    pl.biasplot(SST_bias,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,' ',pyramidal_type,savefig,savepath,interneuron_type)
-
-    interneuron_subclass = 'VIP'
-    data_subset = data_to_plot[data_to_plot.interneuron_type == interneuron_subclass]
-    interneuron_type = data_subset['interneuron_type'].iloc[0]
-    pl.equality_plot(VIP_scatter,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,pyramidal_type,f'{interneuron_subclass} IPSC peak',savefig,savepath,interneuron_type)
-    pl.biasplot(VIP_bias,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,' ',pyramidal_type,savefig,savepath,interneuron_type)
-
-
-    #pl.share_axis([PV_scatter,SST_scatter,VIP_scatter],'y')
-    #pl.share_axis([PV_scatter,SST_scatter,VIP_scatter],'x')
-
-    fig.savefig(os.path.join(savepath, 'Fig_S5.svg'), format='svg', bbox_inches='tight')
+    fig.savefig(savepath / 'Figure_S5.svg')
+    
     plt.show()
 
+    biases_data = pd.read_csv(datapath / 'simulations' / 'simulate_network_empirical_biases.csv')
+    biases_data = biases_data[
+            (biases_data['Condition'] == 'Testing')
+        ]
+    biases_data['Bias_type'] = 'Biased inhibition'
 
-if __name__ == "__main__":
+    unbiased_data = pd.read_csv(datapath / 'simulations' / 'simulate_network_unbiased.csv')
+    unbiased_data = unbiased_data[
+            (unbiased_data['Condition'] == 'Testing')
+        ]
+    unbiased_data['Bias_type'] = 'Unbiased inhibition'
+    
+    data = pd.concat([biases_data,unbiased_data])
 
-    FigureS5(datapath='/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 4/Fig_S5_unlabeled_data.csv',
-            savepath='/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Figure 4',
-    )
+    sns.barplot(data,
+                hue='Population',
+                y='Firing rate [Hz]',
+                x='Bias_type',
+                errorbar='se')
+    plt.show()
+    
+
+GenerateFigure(
+        datapath=Path('/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 3/data_20261112'),
+        ephys_datapath=Path('/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 2/ipsc_results.csv'),
+        savepath=Path('/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Figure 3') 
+)

@@ -1,116 +1,80 @@
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import seaborn as sns
-import matplotlib as mpl
 from code_utils import analysis_plotting as pl
 
-
-plt.rcParams.update({
-    'font.family': 'Arial',
-    'svg.fonttype': 'none',
-    'font.size':10
-})
-
-def Figure_S6(datapath,
-              savepath
-              ):
-
-
-    palette_bars = {'unlabeled': '#E7E7E7',
-                    'IP-OP': '#AE7DF8',
-                    }
-        
-    palette_points = {'unlabeled': '#808080',
-                    'IP-OP': '#AE7DF8',
-                    }
-    
-    order = ['unlabeled','IP-OP']
-
+def GenerateFigure(
+        datapath,
+        savepath,
+        ):
 
     data_to_plot = pd.read_csv(datapath)
-    data_to_plot["shared_input_amp"] = data_to_plot[["Neuron1_amplitude", "Neuron2_amplitude"]].mean(axis=1) 
-    data_to_plot["Pair_dist"] = data_to_plot[["Neuron1_pial_dist", "Neuron2_pial_dist"]].mean(axis=1)
-    data_to_plot = data_to_plot.groupby(['Pair_ID','Pair_type']).mean(numeric_only=True).reset_index()
 
+    interneuron_subclasses = ['PV','SST','VIP']
+    pyramidal_type = data_to_plot['pyramidal_type'].iloc[0] 
+    savefig = False  # make true to save individual plots
 
-    describe = data_to_plot.groupby(['Pair_type'])[['shared_input_amp','Pair_dist']].describe()
-    print(describe)
+    fig, ax = plt.subplots(
+        3, 3,
+        gridspec_kw={
+             'width_ratios': [1.2, 0.9, .2],
+             'height_ratios': [1, 1, 1],
+             'wspace': 0.5,
+             'hspace': 0.4
+         },
+        figsize=(9.27, 10.69)
+    )
+    labels = ['Cell 1','Cell 2']
 
-    fig = plt.figure(figsize=(9.27, 11.69/4))
+        # Remove first column
+    for a in ax[:, 0]:
+        a.axis('off')
 
-    gs = fig.add_gridspec(1, 2)
-    shared_input_ax = fig.add_subplot(gs[0, 0])
-    pial_dist_ax = fig.add_subplot(gs[0, 1])
-
-    pl.add_panel_letter(fig, gs[0, 0], "a")
-    pl.add_panel_letter(fig, gs[0, 1], "b")
-
-    sns.despine(fig,right=True,top=True)
-
-    y = 'shared_input_amp'
-    shared_input_ax.set_xlabel(' ')
-    shared_input_ax.set_ylabel('Shared input amplitude (pA)')
-    sns.barplot(data=data_to_plot,
-                x='Pair_type',
-                y=y,
-                hue='Pair_type',
-                palette=palette_bars,
-                ax=shared_input_ax,
-                order = order,
-                alpha=.5,
-                edgecolor='black',)
-    sns.stripplot(data=data_to_plot,
-                x='Pair_type',
-                hue='Pair_type',
-                y=y,
-                palette=palette_points,
-                order = order,
-                ax=shared_input_ax)
-    test_stat,p, posthoc = pl.perform_stat_test(data_to_plot, y, 'Pair_type')
-    print(test_stat)
-    print(posthoc)
-    pl.add_significance_bars(shared_input_ax, posthoc, data_to_plot.Pair_type.unique(), y_offset=0.05)
-
-
-
-
-    y = 'Pair_dist'
-    pial_dist_ax.set_xlabel(' ')
-    pial_dist_ax.set_ylabel('Pial distance (\u03BCm) ')
-    sns.barplot(data=data_to_plot,
-                x='Pair_type',
-                y=y,
-                hue='Pair_type',
-                palette=palette_bars,
-                ax=pial_dist_ax,
-                order = order,
-                alpha=.5,
-                edgecolor='black',)
-    sns.stripplot(data=data_to_plot,
-                x='Pair_type',
-                hue='Pair_type',
-                y=y,
-                palette=palette_points,
-                order = order,
-                ax=pial_dist_ax)
-    test_stat,p, posthoc = pl.perform_stat_test(data_to_plot, y, 'Pair_type')
-    print(test_stat)
-    print(posthoc)
-    pl.add_significance_bars(shared_input_ax, posthoc, data_to_plot.Pair_type.unique(), y_offset=0.05)
-
+    [PV_scatter, PV_bias,
+     SST_scatter, SST_bias,
+     VIP_scatter, VIP_bias] = ax[:, 1:].reshape(-1)
     
+    # Panel letters on reserved first column + scatter panels
+    pl.add_panel_letter(ax[0, 0], 'a')
+    pl.add_panel_letter(PV_scatter, 'b', x=-0.3, y=1.15)
 
+    pl.add_panel_letter(ax[1, 0], 'c')
+    pl.add_panel_letter(SST_scatter, 'd', x=-0.3, y=1.15)
+
+    pl.add_panel_letter(ax[2, 0], 'e')
+    pl.add_panel_letter(VIP_scatter, 'f', x=-0.3, y=1.15)
+
+
+    interneuron_subclass = 'PV'
+    data_subset = data_to_plot[data_to_plot.interneuron_type == interneuron_subclass]
+    interneuron_type = data_subset['interneuron_type'].iloc[0]
+    pl.equality_plot(PV_scatter,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,pyramidal_type,f'{interneuron_subclass} IPSC peak',savefig,savepath,interneuron_type)
+    pl.biasplot(PV_bias,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,' ',pyramidal_type,savefig,savepath,interneuron_type)
+
+    interneuron_subclass = 'SST'
+    data_subset = data_to_plot[data_to_plot.interneuron_type == interneuron_subclass]
+    interneuron_type = data_subset['interneuron_type'].iloc[0]
+    pl.equality_plot(SST_scatter,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,pyramidal_type,f'{interneuron_subclass} IPSC peak',savefig,savepath,interneuron_type)
+    pl.biasplot(SST_bias,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,' ',pyramidal_type,savefig,savepath,interneuron_type)
+
+    interneuron_subclass = 'VIP'
+    data_subset = data_to_plot[data_to_plot.interneuron_type == interneuron_subclass]
+    interneuron_type = data_subset['interneuron_type'].iloc[0]
+    pl.equality_plot(VIP_scatter,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,pyramidal_type,f'{interneuron_subclass} IPSC peak',savefig,savepath,interneuron_type)
+    pl.biasplot(VIP_bias,data_subset.N1_IPSC_peak.values,data_subset.N2_IPSC_peak.values,' ',pyramidal_type,savefig,savepath,interneuron_type)
+
+
+    #pl.share_axis([PV_scatter,SST_scatter,VIP_scatter],'y')
+    #pl.share_axis([PV_scatter,SST_scatter,VIP_scatter],'x')
+
+    fig.savefig(os.path.join(savepath, 'Figure_S6.svg'), format='svg', bbox_inches='tight')
     plt.show()
 
-    plt.tight_layout()
-    fig.savefig(os.path.join(savepath,'Fig_S6.svg'))
-    fig.savefig(os.path.join(savepath,'Fig_S6.tiff'),dpi=600)
-    
 
 if __name__ == "__main__":
 
-
-    Figure_S6(datapath='/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 5/Fig_5_data.csv',
-                savepath='/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Figure 5/')
+    GenerateFigure(datapath='/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 4/Fig_S6_unlabeled_data.csv',
+            savepath='/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Figure 4',
+    )

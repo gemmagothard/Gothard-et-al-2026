@@ -41,18 +41,21 @@ def plot_regression_stats(data, x, y, ax):
 colors_neurons = {
         'OP-der':'#00CDE5',
         'IP-der': '#CB23E0',
+        #'unlabeled':'grey'
         }
 
 colors_pairs = {
                 'OP-OP':'#00CDE5',
                 'IP-OP': '#AE7DF8',
                 'IP-IP':'#E404FF',
+                #'unlabeled':'grey'
                     }
 
 path  = Path('/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 2/')
 
 ipsc_shared_results = pd.read_csv(path / 'ipsc_results.csv')
 ipsc_results_by_neuron = pd.read_csv(path / 'ipsc_results_by_neuron_2026.csv')
+
 
 epsc_shared_results = pd.read_csv(path / 'epsc_results.csv')
 epsc_results_by_neuron = pd.read_csv(path / 'epsc_results_by_neuron_2026.csv')
@@ -62,6 +65,12 @@ epsc_shared_results = epsc_shared_results.dropna(subset=['percent_shared_mean'])
 
 ipsc_results_by_neuron = ipsc_results_by_neuron.dropna(subset=['percent_shared'])
 epsc_results_by_neuron = epsc_results_by_neuron.dropna(subset=['percent_shared'])
+
+ipsc_shared_results = ipsc_shared_results[ipsc_shared_results.pair_type != 'unlabeled']
+epsc_shared_results = epsc_shared_results[epsc_shared_results.pair_type != 'unlabeled']
+
+ipsc_results_by_neuron = ipsc_results_by_neuron[ipsc_results_by_neuron.pair_type != 'unlabeled']
+epsc_results_by_neuron = epsc_results_by_neuron[epsc_results_by_neuron.pair_type != 'unlabeled']
 
 print(f'IPSC pairs N: \n {ipsc_shared_results.groupby(['pair_type'])['pair_id'].count()}')
 print(f'IPSC pairs, n of mice: \n {ipsc_shared_results.groupby(['pair_type'])['mouse_id'].nunique()}')

@@ -88,7 +88,7 @@ def add_example_to_plot(fig, subplot_spec, type, example=None,panel_letter=None)
 
     #example = 'IP-IP'
 
-    datapath = Path('/Volumes/MAC_FORMAT/Data_dphil/in_vitro_spontaneous_data')
+    datapath = Path('/Volumes/Gemma_data/Data_dphil/in_vitro_spontaneous_data')
 
     if not datapath.is_dir():
         return
@@ -96,6 +96,7 @@ def add_example_to_plot(fig, subplot_spec, type, example=None,panel_letter=None)
     colors = {
             'red':'#00CDE5',
             'green': '#CB23E0',
+            'grey':'grey'
             }
 
 # IPSC EXAMPLES
@@ -117,8 +118,28 @@ def add_example_to_plot(fig, subplot_spec, type, example=None,panel_letter=None)
     # unshared input aIP2: 298.33-298.83
     # unshared input aIP3: 281.45-281.95
 
+    # GREY EXAMPLES:
+    # Grey-Grey example, folder: P 230202_008
+    # 30-55 whole, y_max = 279
+    # shared input1: 36.14-36.64
+    # shared input2: 38.55-39.05
+    # unshared input1: 41.82-41.32
+    # unshared input2: 
+
 # EPSC EXAMPLES
     # OP-OP: 210214_006
+    if example == 'unlabeled':
+        if type == 'ipsc':
+            cell_id = 'P 230202_008'
+            x1 = 30
+            x2 = 50
+            t1, t2 = 36.300, 36.800
+            t3, t4 = 38.690, 39.190
+            t5, t6 = 42.030, 42.530
+            ex1_title = 'Shared'
+            ex2_title = 'Shared'
+            ex3_title = 'Unshared'
+
 
     if example=='IP-OP':
         if type == 'ipsc':
@@ -311,7 +332,7 @@ def add_example_to_plot(fig, subplot_spec, type, example=None,panel_letter=None)
             linewidth=0
         )
 
-    if example == 'IP-IP':
+    if example in ['IP-IP', 'unlabeled']:
         if type == 'ipsc':
             scale_bar(full2,x_scale=1,y_scale=100,x_label='s',y_label='pA',x_offset=0.05,y_offset=0.1,lw=1.5,fontsize=8)
         else:

@@ -118,7 +118,7 @@ def Figure5(
 
     y = 'Distance_apart'
     ax_dist.set_xlabel(' ')
-    ax_dist.set_ylabel('Pair-wise distance (\u03BCm)')
+    ax_dist.set_ylabel('Inter-neuronal distance (\u03BCm)')
     data_pairs = data_to_plot.groupby(['Pair_ID','Pair_type'])[['Distance_apart',
                                                                 'Neuron1_pial_dist',
                                                                 'Neuron2_pial_dist',

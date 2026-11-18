@@ -35,6 +35,7 @@ colors_pairs = {
                     'OP-OP':'#00CDE5',
                     'IP-OP': '#AE7DF8',
                     'IP-IP':'#E404FF',
+                    'unlabeled':'grey',
                     }
 
 
@@ -124,10 +125,10 @@ if __name__ == "__main__":
     path  = Path('/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 2/')
 
     ipsc_shared_results = pd.read_csv(path / 'ipsc_results.csv')
-    ipsc_results_by_neuron = pd.read_csv(path / 'ipsc_results_by_neuron_2026.csv')
-
     epsc_shared_results = pd.read_csv(path / 'epsc_results.csv')
-    epsc_results_by_neuron = pd.read_csv(path / 'epsc_results_by_neuron_2026.csv')
+
+    ipsc_shared_results = ipsc_shared_results[ipsc_shared_results.pair_type != 'unlabeled']
+    epsc_shared_results = epsc_shared_results[epsc_shared_results.pair_type != 'unlabeled']
 
     ipsc_shared_results = ipsc_shared_results.dropna(subset=['percent_shared_mean'])
     epsc_shared_results = epsc_shared_results.dropna(subset=['percent_shared_mean'])

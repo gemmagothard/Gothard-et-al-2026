@@ -61,7 +61,6 @@ if __name__ == "__main__":
     calcium_events = pd.read_csv(csv_path / 'all_calcium_events.csv')
 
     shared_peaks_cropped = shared_peaks[shared_peaks["XY_distance"].eq(0)]
-    print(shared_peaks_cropped.head())
 
     calcium_events_by_neuron = (
             calcium_events
@@ -93,7 +92,10 @@ if __name__ == "__main__":
                     errors="coerce"
                 )
     spontaneous_events_by_neuron['Event rate (min$^{-1}$)'] = spontaneous_events_by_neuron.event_count / (spontaneous_events_by_neuron.state_duration / 60)
-    print(spontaneous_events_by_neuron.groupby('neuron_type').size())
+
+    print(f'Neuron count: \n {spontaneous_events_by_neuron.groupby('neuron_type').size()}')
+    print(f'Pair type n: \n {shared_peaks_cropped.groupby('lineage_label')['XY_distance'].count()}')
+    print(f'Animal count: \n {shared_peaks_cropped.groupby('lineage_label')['mouse_id'].nunique()}')
 
     fig = plt.figure(figsize=(10, 11.69*0.6))
 
@@ -131,11 +133,10 @@ if __name__ == "__main__":
                 palette=palette_neurons
                 )
     event_amp.set_xlabel(' ')
-    print(y)
     test_stat,p, posthoc = pl.perform_stat_test(spontaneous_events_by_neuron, y, 'neuron_type')
-    print(test_stat)
-    print(posthoc)
-    pl.add_significance_bars(event_amp, posthoc, spontaneous_events_by_neuron.neuron_type.unique(), y_offset=0.05)
+    print(f'Event amplitude: T = {test_stat:3g}, P = {p:3g}')
+    if posthoc is not np.nan:
+        pl.add_significance_bars(event_amp, posthoc, spontaneous_events_by_neuron.neuron_type.unique(), y_offset=0.05)
 
     y = 'Event rate (min$^{-1}$)'
     sns.barplot(spontaneous_events_by_neuron,
@@ -146,11 +147,10 @@ if __name__ == "__main__":
                 errorbar='se',
                 ax=event_rate)
     event_rate.set_xlabel(' ')
-    print(y)
     test_stat,p, posthoc = pl.perform_stat_test(spontaneous_events_by_neuron, y, 'neuron_type')
-    print(test_stat)
-    print(posthoc)
-    pl.add_significance_bars(event_rate, posthoc, spontaneous_events_by_neuron.neuron_type.unique(), y_offset=0.05)
+    print(f'Event rate: T = {test_stat:3g}, P = {p:3g}')
+    if posthoc is not np.nan:
+        pl.add_significance_bars(event_rate, posthoc, spontaneous_events_by_neuron.neuron_type.unique(), y_offset=0.05)
     
     y = 'XY_dist_raw'
     sns.barplot(shared_peaks_cropped,
@@ -161,118 +161,12 @@ if __name__ == "__main__":
                 order = list(palette.keys()),
                 errorbar='se',
                 ax=dist)
-    dist.set_ylabel('Distance between pairs (µm)')
+    dist.set_ylabel('Inter-neuronal distance (µm)')
     dist.set_xlabel(' ')
-    print(y)
     test_stat,p, posthoc = pl.perform_stat_test(shared_peaks_cropped, y, 'lineage_label')
-    print(test_stat)
-    print(posthoc)
-    #pl.add_significance_bars(event_rate, posthoc, shared_peaks_cropped.lineage_label.unique(), y_offset=0.05)
-
-
-
-    # Fixed effects
-    y, X = patsy.dmatrices(
-        """
-        XY_dist_raw ~
-        C(lineage_label, Treatment(reference='OP-OP'))
-        + C(mouse_id)
-        """,
-        data=shared_peaks,
-        return_type="dataframe"
-    )
-
-    # FOV random intercept
-    groups = shared_peaks["FOV_id"]
-
-    # Multi-membership neuron random effect
-    # Accounts for neuron_a / neuron_b appearing in multiple pairs
-    vc = f1_ut.make_neuron_vc(shared_peaks)
-    model_dist = sm.MixedLM(
-        endog=y,
-        exog=X,
-        groups=groups,
-        exog_re=np.ones((len(shared_peaks), 1)),
-        exog_vc=vc
-    )
-    result_dist = model_dist.fit(reml=True)
-    print(result_dist.summary())
-    print("\nExact p-values:")
-    print(result_dist.pvalues[result_dist.fe_params.index])
-
-
-
-
-    def test_lineage_effect(result):
-
-        beta = result.fe_params
-        cov = result.cov_params().loc[
-            beta.index,
-            beta.index
-        ]
-
-        names = list(beta.index)
-        n = len(names)
-
-        # Find lineage coefficient positions
-        ipip_idx = next(
-            i for i, name in enumerate(names)
-            if "IP-IP" in name
-        )
-
-        ipop_idx = next(
-            i for i, name in enumerate(names)
-            if "IP-OP" in name
-        )
-
-        # --------------------------------------------------
-        # OMNIBUS TEST
-        #
-        # H0:
-        #   beta_IP-IP = 0
-        #   beta_IP-OP = 0
-        #
-        # Equivalent to:
-        #   OP-OP = IP-IP = IP-OP
-        # --------------------------------------------------
-
-        R = np.zeros((2, n))
-        R[0, ipip_idx] = 1
-        R[1, ipop_idx] = 1
-
-        beta_r = beta.values
-        cov_r = cov.values
-
-        Rb = R @ beta_r
-        RVR = R @ cov_r @ R.T
-
-        chi2_stat = float(
-            Rb.T @ np.linalg.inv(RVR) @ Rb
-        )
-
-        df = 2
-
-        p_value = chi2.sf(
-            chi2_stat,
-            df
-        )
-
-        print("\n====================================")
-        print("OMNIBUS LINEAGE TEST")
-        print("====================================")
-        print(f"Chi-square = {chi2_stat:.3f}")
-        print(f"df         = {df}")
-        print(f"p-value    = {p_value:.4g}")
-
-        # --------------------------------------------------
-        # PAIRWISE COMPARISONS
-        # --------------------------------------------------
-    lineage_has_effect = test_lineage_effect(result_dist)
-
-    results, posthoc = f1_ut.pairwise_lineage_tests(result_dist)
-    print(results)
-    categories = ["OP-OP", "IP-IP", "IP-OP"]
-    pl.add_significance_bars(dist, posthoc, categories, y_offset=1)
+    print(f'Inter-neuronal dist: T = {test_stat:3g}, P = {p:3g}')
+    if posthoc is not np.nan:
+        pl.add_significance_bars(event_rate, posthoc, shared_peaks_cropped.lineage_label.unique(), y_offset=0.05)
 
     y = shared_peaks_cropped['events_above_chance']
     event_label = 'Above chance co-activity rate (min$^{-1}$)'

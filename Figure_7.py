@@ -22,7 +22,7 @@ palette_bars = {
 cell_type_map = {'IP-derived':'IP-der',
                  'Unlabeled':'Unlabeled'}
 
-def Figure6(
+def Figure7(
         NBQX_datapath,
         traces_datapath,
         cell_datapath,
@@ -32,10 +32,13 @@ def Figure6(
     order = ['Unlabeled','IP-der']
     
     NBQX_data = pd.read_csv(NBQX_datapath)
-    traces = np.load(traces_datapath)
+    traces = pd.read_csv(traces_datapath)
     cells = pd.read_csv(cell_datapath)
-    cells = cells[np.logical_or(cells.cell_type=='IP-derived',cells.cell_type=='Unlabeled')]
-    cells['cell_type'] = cells.cell_type.map(cell_type_map)
+    #cells['cell_type'] = cells['cell_type'].map(cell_type_map)
+    #traces['cell_type'] = traces['cell_type'].map(cell_type_map)
+
+    cells = cells[np.logical_or(cells.cell_type=='IP-der',cells.cell_type=='Unlabeled')]
+    traces = traces[traces.cell_type.isin(['IP-der','Unlabeled'])]
 
 
     described = cells.groupby(['cell_type'])[['IT_lfp','STTC']].describe()
@@ -75,18 +78,29 @@ def Figure6(
     pl.add_panel_letter(fig, gs3[0, 1], "i")
 
         
-    IP_mean = np.mean(traces['IP-der'],axis=0)
-    IP_sem = st.sem(traces['IP-der'],axis=0)
-    unlabeled_mean = np.mean(traces['unlabeled'],axis=0)
-    unlabeled_sem = st.sem(traces['unlabeled'],axis=0)
+    # IP_mean = np.mean(traces['IP-der'],axis=0)
+    # IP_sem = st.sem(traces['IP-der'],axis=0)
+    # unlabeled_mean = np.mean(traces['unlabeled'],axis=0)
+    # unlabeled_sem = st.sem(traces['unlabeled'],axis=0)
 
-    it_LFP_examples.plot(traces['timevec_trace'],IP_mean,color=palette_bars['IP-der'])
-    it_LFP_examples.fill_between(traces['timevec_trace'],IP_mean+IP_sem,IP_mean-IP_sem,color=palette_bars['IP-der'],alpha=.2)
-    it_LFP_examples.plot(traces['timevec_trace'],unlabeled_mean,color=palette_bars['Unlabeled'])
-    it_LFP_examples.fill_between(traces['timevec_trace'],unlabeled_mean+unlabeled_sem,unlabeled_mean-unlabeled_sem,color=palette_bars['Unlabeled'],alpha=.2)
+    # it_LFP_examples.plot(traces['timevec_trace'],IP_mean,color=palette_bars['IP-der'])
+    # it_LFP_examples.fill_between(traces['timevec_trace'],IP_mean+IP_sem,IP_mean-IP_sem,color=palette_bars['IP-der'],alpha=.2)
+    # it_LFP_examples.plot(traces['timevec_trace'],unlabeled_mean,color=palette_bars['Unlabeled'])
+    # it_LFP_examples.fill_between(traces['timevec_trace'],unlabeled_mean+unlabeled_sem,unlabeled_mean-unlabeled_sem,color=palette_bars['Unlabeled'],alpha=.2)
+    sns.lineplot(traces,
+             x='timevec',
+             y='lfp_windows',
+             hue='cell_type',
+             palette=palette_bars,
+             errorbar='se',
+             estimator='mean',
+             ax=it_LFP_examples,
+             legend=False
+             )
     it_LFP_examples.set_ylabel('IT-LFP (-\u03BCV)')
+    it_LFP_examples.set_xlabel('Time lags (ms)')
     it_LFP_examples.axvline(0,linestyle='dotted',color='black')
-    it_LFP_examples.set_xlim(-50,50)
+    it_LFP_examples.set_xlim(-100,100)
 
 
     y = 'IT_lfp'
@@ -207,8 +221,8 @@ def Figure6(
 
 
 datapath = '/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Source_data/Figure 7'
-Figure6(NBQX_datapath=os.path.join(datapath,'Fig_7_NBQXdata.csv'),
-        traces_datapath=os.path.join(datapath,'Fig_7_IT_LFP_traces.npz'),
-        cell_datapath=os.path.join(datapath,'Fig_7_data.csv'),
+Figure7(NBQX_datapath=os.path.join(datapath,'NBQX_results.csv'),
+        traces_datapath=os.path.join(datapath,'lfp_windows.csv'),
+        cell_datapath=os.path.join(datapath,'results.csv'),
         savepath='/Users/gemmagothard/Library/CloudStorage/OneDrive-Nexus365/DPhil/Papers/Inhibitory_subnetwork_2026/Figure 7'
 )
